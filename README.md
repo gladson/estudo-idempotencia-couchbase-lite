@@ -59,6 +59,8 @@ Este projeto demonstra a implementação prática de **idempotência** em aplica
 | **Modo Dark/Light** | ✅ | Suporte a temas | ThemeData configurado |
 | **Performance Otimizada** | ✅ | Lista com 1k+ itens sem travamento | `itemExtent` + `RepaintBoundary` |
 | **Atualização Assíncrona** | ✅ | UI responsiva durante operações | Operações em background |
+| **Busca por Texto** | ✅ | Busca em descrição, ID e IDG | `setSearchQuery()` no Cubit |
+| **Filtros por Status** | ✅ | Filtra por status das tarefas | `setFilter()` com TaskFilter enum |
 
 ### Pontos de Idempotência
 
@@ -201,6 +203,51 @@ Performance Metrics (Tempo em segundos)
 3. Mantém documento no banco
 4. Altera cor do card para vermelho
 
+## 🔍 Funcionalidades de Busca e Filtros
+
+### Busca por Texto
+- **Campo de busca**: Interface intuitiva com ícone de lupa
+- **Busca em múltiplos campos**: Descrição, ID e IDG das tarefas
+- **Busca case-insensitive**: Não diferencia maiúsculas/minúsculas
+- **Busca em tempo real**: Resultados atualizados conforme digitação
+- **Performance otimizada**: Filtragem local no Cubit
+
+### Filtros por Status
+- **Todas**: Mostra todas as tarefas (padrão)
+- **Ativas**: Apenas tarefas não concluídas e não deletadas
+- **Concluídas**: Apenas tarefas marcadas como concluídas
+- **Deletadas**: Apenas tarefas com soft delete
+
+### Implementação Técnica
+
+```dart
+// Enum para tipos de filtro
+enum TaskFilter { all, active, completed, deleted }
+
+// Métodos no TaskCubit
+void setSearchQuery(String query) {
+  _searchQuery = query.toLowerCase();
+  _applyFilters();
+}
+
+void setFilter(TaskFilter filter) {
+  currentFilter = filter;
+  _applyFilters();
+}
+
+void _applyFilters() {
+  // Aplica filtros por status
+  // Aplica busca por texto
+  // Emite nova lista filtrada
+}
+```
+
+### Características de Performance
+- **Filtragem local**: Não consulta banco de dados
+- **Atualização instantânea**: UI responde imediatamente
+- **Contadores em tempo real**: Mostra quantidade por status
+- **Interface responsiva**: Chips animados para seleção
+
 ### Hard Delete
 1. Remove documento do banco
 2. Atualiza lista local
@@ -307,7 +354,6 @@ ggfm/
 ## 📝 Próximos Passos
 
 - Implementar sincronização com servidor remoto
-- Adicionar filtros e busca nas tarefas
 - Implementar paginação para listas muito grandes
 - Adicionar testes automatizados
 - Implementar backup e restore de dados
