@@ -99,8 +99,7 @@ class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
         }).toList();
         break;
       case TaskFilter.all:
-      default:
-        // Não filtrar por status
+      // Não filtrar por status
         break;
     }
 
@@ -868,7 +867,7 @@ class CustomPaginationBar extends StatelessWidget {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      color: Theme.of(context).colorScheme.primary.withAlpha((0.2 * 255).toInt()),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -900,7 +899,7 @@ class CustomPaginationBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withAlpha((0.04 * 255).toInt()),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
