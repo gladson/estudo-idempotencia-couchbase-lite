@@ -9,20 +9,101 @@ import 'package:cbl/cbl.dart';
 
 import 'package:uuid/uuid.dart'; // Para gerar IDs únicos
 
+enum TaskFilter { all, active, completed, deleted }
+
 class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
   TaskCubit() : super([]);
 
-  void setTasks(List<Map<String, dynamic>> tasks) => emit(tasks);
+  List<Map<String, dynamic>> _allTasks = [];
+  String _searchQuery = '';
+  TaskFilter currentFilter = TaskFilter.all;
+
+  void setTasks(List<Map<String, dynamic>> tasks) {
+    _allTasks = tasks;
+    _applyFilters();
+  }
 
   void updateTask(String id, Map<String, dynamic> newTask) {
-    final updated = state.map((task) {
+    final updated = _allTasks.map((task) {
       if (task['_id'] == id) {
         return {...task, ...newTask};
       }
       return task;
     }).toList();
-    emit(updated);
+    _allTasks = updated;
+    _applyFilters();
   }
+
+  void setSearchQuery(String query) {
+    _searchQuery = query.toLowerCase();
+    _applyFilters();
+  }
+
+  void setFilter(TaskFilter filter) {
+    currentFilter = filter;
+    _applyFilters();
+  }
+
+  void _applyFilters() {
+    List<Map<String, dynamic>> filteredTasks = _allTasks;
+
+    // Aplicar filtro por status
+    switch (currentFilter) {
+      case TaskFilter.active:
+        filteredTasks = _allTasks.where((task) {
+          final taskData = task['tasks'] ?? {};
+          return taskData['deletedAt'] == null && taskData['completed'] != true;
+        }).toList();
+        break;
+      case TaskFilter.completed:
+        filteredTasks = _allTasks.where((task) {
+          final taskData = task['tasks'] ?? {};
+          return taskData['deletedAt'] == null && taskData['completed'] == true;
+        }).toList();
+        break;
+      case TaskFilter.deleted:
+        filteredTasks = _allTasks.where((task) {
+          final taskData = task['tasks'] ?? {};
+          return taskData['deletedAt'] != null;
+        }).toList();
+        break;
+      case TaskFilter.all:
+      default:
+        // Não filtrar por status
+        break;
+    }
+
+    // Aplicar busca por texto
+    if (_searchQuery.isNotEmpty) {
+      filteredTasks = filteredTasks.where((task) {
+        final taskData = task['tasks'] ?? {};
+        final description = (taskData['description'] ?? '').toString().toLowerCase();
+        final idg = (taskData['idg'] ?? '').toString().toLowerCase();
+        final id = (task['_id'] ?? '').toString().toLowerCase();
+        
+        return description.contains(_searchQuery) || 
+               idg.contains(_searchQuery) || 
+               id.contains(_searchQuery);
+      }).toList();
+    }
+
+    emit(filteredTasks);
+  }
+
+  // Getters para estatísticas
+  int get totalTasks => _allTasks.length;
+  int get activeTasks => _allTasks.where((task) {
+    final taskData = task['tasks'] ?? {};
+    return taskData['deletedAt'] == null && taskData['completed'] != true;
+  }).length;
+  int get completedTasks => _allTasks.where((task) {
+    final taskData = task['tasks'] ?? {};
+    return taskData['deletedAt'] == null && taskData['completed'] == true;
+  }).length;
+  int get deletedTasks => _allTasks.where((task) {
+    final taskData = task['tasks'] ?? {};
+    return taskData['deletedAt'] != null;
+  }).length;
 }
 
 void main() async {
@@ -337,6 +418,63 @@ class IdempotenceDemoScreenState extends State<IdempotenceDemoScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // Campo de busca
+            TextField(
+              onChanged: (value) {
+                context.read<TaskCubit>().setSearchQuery(value);
+              },
+              decoration: InputDecoration(
+                labelText: '🔍 Buscar tarefas...',
+                hintText: 'Digite descrição, ID ou IDG',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+            ),
+            SizedBox(height: 16),
+            
+            // Filtros por status
+            BlocBuilder<TaskCubit, List<Map<String, dynamic>>>(
+              builder: (context, tasks) {
+                final cubit = context.read<TaskCubit>();
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _FilterChip(
+                        label: 'Todas (${cubit.totalTasks})',
+                        isSelected: cubit.currentFilter == TaskFilter.all,
+                        onTap: () => cubit.setFilter(TaskFilter.all),
+                      ),
+                      SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Ativas (${cubit.activeTasks})',
+                        isSelected: cubit.currentFilter == TaskFilter.active,
+                        onTap: () => cubit.setFilter(TaskFilter.active),
+                      ),
+                      SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Concluídas (${cubit.completedTasks})',
+                        isSelected: cubit.currentFilter == TaskFilter.completed,
+                        onTap: () => cubit.setFilter(TaskFilter.completed),
+                      ),
+                      SizedBox(width: 8),
+                      _FilterChip(
+                        label: 'Deletadas (${cubit.deletedTasks})',
+                        isSelected: cubit.currentFilter == TaskFilter.deleted,
+                        onTap: () => cubit.setFilter(TaskFilter.deleted),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 16),
+            
+            // Campo de nova tarefa
             TextField(
               controller: _taskDescriptionController,
               decoration: InputDecoration(
@@ -516,6 +654,51 @@ class _InfoChip extends StatelessWidget {
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected 
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected 
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outline,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected 
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
+          ),
         ),
       ),
     );
