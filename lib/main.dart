@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
+import 'dart:math';
 
 import 'package:cbl_flutter/cbl_flutter.dart';
 import 'package:cbl/cbl.dart';
@@ -15,8 +16,14 @@ class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
   TaskCubit() : super([]);
 
   List<Map<String, dynamic>> _allTasks = [];
+  List<Map<String, dynamic>> _filteredTasks = [];
   String _searchQuery = '';
   TaskFilter currentFilter = TaskFilter.all;
+  
+  // Controles de paginação
+  static const int _itemsPerPage = 100;
+  int _currentPage = 0;
+  bool _hasPagination = false;
 
   void setTasks(List<Map<String, dynamic>> tasks) {
     _allTasks = tasks;
@@ -36,12 +43,36 @@ class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
 
   void setSearchQuery(String query) {
     _searchQuery = query.toLowerCase();
+    _currentPage = 0; // Reset para primeira página
     _applyFilters();
   }
 
   void setFilter(TaskFilter filter) {
     currentFilter = filter;
+    _currentPage = 0; // Reset para primeira página
     _applyFilters();
+  }
+
+  // Métodos de paginação
+  void nextPage() {
+    if (_hasPagination && _currentPage < totalPages - 1) {
+      _currentPage++;
+      _applyPagination();
+    }
+  }
+
+  void previousPage() {
+    if (_hasPagination && _currentPage > 0) {
+      _currentPage--;
+      _applyPagination();
+    }
+  }
+
+  void goToPage(int page) {
+    if (_hasPagination && page >= 0 && page < totalPages) {
+      _currentPage = page;
+      _applyPagination();
+    }
   }
 
   void _applyFilters() {
@@ -87,7 +118,28 @@ class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
       }).toList();
     }
 
-    emit(filteredTasks);
+    _filteredTasks = filteredTasks;
+    _hasPagination = _filteredTasks.length > _itemsPerPage;
+    
+    // Reset para primeira página se necessário
+    if (_currentPage >= totalPages) {
+      _currentPage = 0;
+    }
+    
+    _applyPagination();
+  }
+
+  void _applyPagination() {
+    if (!_hasPagination) {
+      emit(_filteredTasks);
+      return;
+    }
+
+    final startIndex = _currentPage * _itemsPerPage;
+    final endIndex = (startIndex + _itemsPerPage).clamp(0, _filteredTasks.length);
+    final paginatedTasks = _filteredTasks.sublist(startIndex, endIndex);
+    
+    emit(paginatedTasks);
   }
 
   // Getters para estatísticas
@@ -104,6 +156,17 @@ class TaskCubit extends Cubit<List<Map<String, dynamic>>> {
     final taskData = task['tasks'] ?? {};
     return taskData['deletedAt'] != null;
   }).length;
+
+  // Getters para paginação
+  int get currentPage => _currentPage;
+  int get itemsPerPage => _itemsPerPage;
+  int get totalPages => (_filteredTasks.length / _itemsPerPage).ceil();
+  bool get hasPagination => _hasPagination;
+  bool get hasNextPage => _currentPage < totalPages - 1;
+  bool get hasPreviousPage => _currentPage > 0;
+  int get displayedItemsCount => _filteredTasks.length;
+  int get currentPageStartItem => _currentPage * _itemsPerPage + 1;
+  int get currentPageEndItem => ((_currentPage + 1) * _itemsPerPage).clamp(0, _filteredTasks.length);
 }
 
 void main() async {
@@ -424,7 +487,7 @@ class IdempotenceDemoScreenState extends State<IdempotenceDemoScreen> {
                 context.read<TaskCubit>().setSearchQuery(value);
               },
               decoration: InputDecoration(
-                labelText: '🔍 Buscar tarefas...',
+                labelText: 'Buscar tarefas...',
                 hintText: 'Digite descrição, ID ou IDG',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
@@ -500,6 +563,7 @@ class IdempotenceDemoScreenState extends State<IdempotenceDemoScreen> {
                 const SizedBox(width: 8),
                 BlocBuilder<TaskCubit, List<Map<String, dynamic>>>(
                   builder: (context, tasks) {
+                    final cubit = context.read<TaskCubit>();
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -508,7 +572,9 @@ class IdempotenceDemoScreenState extends State<IdempotenceDemoScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${tasks.length}',
+                        cubit.hasPagination 
+                          ? '${cubit.currentPageStartItem}-${cubit.currentPageEndItem} de ${cubit.displayedItemsCount}'
+                          : '${tasks.length}',
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.bold,
@@ -624,6 +690,23 @@ class IdempotenceDemoScreenState extends State<IdempotenceDemoScreen> {
                 },
               ),
             ),
+            BlocBuilder<TaskCubit, List<Map<String, dynamic>>>(
+              builder: (context, tasks) {
+                final cubit = context.read<TaskCubit>();
+                if (!cubit.hasPagination) return const SizedBox.shrink();
+                return CustomPaginationBar(
+                  currentPage: cubit.currentPage,
+                  totalPages: cubit.totalPages,
+                  totalResults: cubit.displayedItemsCount,
+                  pageSize: cubit.itemsPerPage,
+                  showingStart: cubit.currentPageStartItem,
+                  showingEnd: cubit.currentPageEndItem,
+                  onPrevious: cubit.hasPreviousPage ? cubit.previousPage : null,
+                  onNext: cubit.hasNextPage ? cubit.nextPage : null,
+                  onPageSelected: (page) => cubit.goToPage(page),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -700,6 +783,163 @@ class _FilterChip extends StatelessWidget {
             fontSize: 14,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class CustomPaginationBar extends StatelessWidget {
+  final int currentPage;
+  final int totalPages;
+  final int totalResults;
+  final int pageSize;
+  final int showingStart;
+  final int showingEnd;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+  final void Function(int page)? onPageSelected;
+
+  const CustomPaginationBar({
+    super.key,
+    required this.currentPage,
+    required this.totalPages,
+    required this.totalResults,
+    required this.pageSize,
+    required this.showingStart,
+    required this.showingEnd,
+    this.onPrevious,
+    this.onNext,
+    this.onPageSelected,
+  });
+
+  List<Widget> _buildPageNumbers(BuildContext context) {
+    List<Widget> widgets = [];
+    int maxPagesToShow = 5;
+    int startPage = (currentPage - 2).clamp(0, max(0, totalPages - maxPagesToShow));
+    int endPage = min(startPage + maxPagesToShow, totalPages);
+
+    if (startPage > 0) {
+      widgets.add(_pageButton(context, 0));
+      if (startPage > 1) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('...'),
+        ));
+      }
+    }
+
+    for (int i = startPage; i < endPage; i++) {
+      widgets.add(_pageButton(context, i));
+    }
+
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        widgets.add(const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: Text('...'),
+        ));
+      }
+      widgets.add(_pageButton(context, totalPages - 1));
+    }
+
+    return widgets;
+  }
+
+  Widget _pageButton(BuildContext context, int page) {
+    final bool isActive = page == currentPage;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: GestureDetector(
+        onTap: isActive ? null : () => onPageSelected?.call(page),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isActive
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline,
+              width: 2,
+            ),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
+          ),
+          child: Text(
+            '${page + 1}',
+            style: TextStyle(
+              color: isActive
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 24, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Previous
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            tooltip: 'Anterior',
+            onPressed: currentPage > 0 ? onPrevious : null,
+          ),
+          // Números de página
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: _buildPageNumbers(context),
+          ),
+          // Next
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: 'Próxima',
+            onPressed: currentPage < totalPages - 1 ? onNext : null,
+          ),
+          // Info de resultados
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                'Mostrando $showingEnd de $totalResults resultados',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
