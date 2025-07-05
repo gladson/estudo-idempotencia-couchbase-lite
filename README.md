@@ -407,7 +407,6 @@ ggfm/
 ## 📝 Próximos Passos
 
 - Implementar sincronização com servidor remoto
-- Implementar paginação para listas muito grandes
 - Adicionar testes automatizados
 - Implementar backup e restore de dados
 
