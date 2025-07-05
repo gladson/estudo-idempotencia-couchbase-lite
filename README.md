@@ -1,6 +1,7 @@
 # Projeto de Estudo: Idempotência com Couchbase Lite
 
-<img width="717" height="872" alt="Image" src="https://github.com/user-attachments/assets/dbbf7474-2c17-4b3a-bcad-5fb345d73d25" />
+<img width="800" height="940" alt="Image" src="https://github.com/user-attachments/assets/ecf57d85-d4bb-487c-ae9c-197bc0b696f7" />
+
 
 ## 📋 Visão Geral
 
@@ -365,3 +366,11 @@ Este projeto é de uso educacional e demonstração de conceitos de idempotênci
 ---
 
 **Desenvolvido como estudo prático de idempotência e performance em aplicações móveis com Flutter e Couchbase Lite.**
+
+VERSIONS:
+
+v2:
+<img width="800" height="940" alt="Image" src="https://github.com/user-attachments/assets/ecf57d85-d4bb-487c-ae9c-197bc0b696f7" />
+
+v1:
+<img width="717" height="872" alt="Image" src="https://github.com/user-attachments/assets/dbbf7474-2c17-4b3a-bcad-5fb345d73d25" />
