@@ -1,5 +1,7 @@
 # Projeto de Estudo: Idempotência com Couchbase Lite
 
+<img width="717" height="872" alt="Image" src="https://github.com/user-attachments/assets/dbbf7474-2c17-4b3a-bcad-5fb345d73d25" />
+
 ## 📋 Visão Geral
 
 Este projeto demonstra a implementação prática de **idempotência** em aplicações Flutter utilizando **Couchbase Lite** como banco de dados local. O objetivo é criar um sistema robusto onde operações podem ser executadas múltiplas vezes sem causar efeitos colaterais indesejados.
