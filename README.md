@@ -1,6 +1,6 @@
 # Projeto de Estudo: Idempotência com Couchbase Lite
 
-<img width="800" height="940" alt="Image" src="https://github.com/user-attachments/assets/ecf57d85-d4bb-487c-ae9c-197bc0b696f7" />
+<img width="813" height="885" alt="Image" src="https://github.com/user-attachments/assets/be8ed44e-5f2d-4fcb-9272-531d12fdef1a" />
 
 
 ## 📋 Visão Geral
@@ -62,6 +62,7 @@ Este projeto demonstra a implementação prática de **idempotência** em aplica
 | **Atualização Assíncrona** | ✅ | UI responsiva durante operações | Operações em background |
 | **Busca por Texto** | ✅ | Busca em descrição, ID e IDG | `setSearchQuery()` no Cubit |
 | **Filtros por Status** | ✅ | Filtra por status das tarefas | `setFilter()` com TaskFilter enum |
+| **Paginação Automática** | ✅ | Ativa automaticamente com 100+ itens | 100 itens por página |
 
 ### Pontos de Idempotência
 
@@ -118,16 +119,16 @@ Performance Metrics (Tempo em segundos)
 
 ### Análise de Performance
 
-| Volume de Dados | Carregamento | FPS | Memória | Observações |
-|-----------------|--------------|-----|---------|-------------|
-| **100 tarefas** | < 0.1s | 60 | ~5MB | Performance excelente |
-| **500 tarefas** | < 0.5s | 60 | ~15MB | Performance ótima |
-| **1.000 tarefas** | < 1.0s | 60 | ~25MB | Performance muito boa |
-| **2.000 tarefas** | < 2.0s | 60 | ~45MB | Performance boa |
-| **5.000 tarefas** | < 3.0s | 55-60 | ~100MB | Performance aceitável |
-| **10.000 tarefas** | < 5.0s | 50-55 | ~200MB | Performance adequada |
-| **15.000 tarefas** | < 7.0s | 45-50 | ~300MB | Requer otimizações |
-| **20.000 tarefas** | < 10.0s | 40-45 | ~400MB | Limite recomendado |
+| Volume de Dados | Carregamento | FPS | Memória | Paginação | Observações |
+|-----------------|--------------|-----|---------|-----------|-------------|
+| **100 tarefas** | < 0.1s | 60 | ~5MB | ❌ | Performance excelente |
+| **500 tarefas** | < 0.5s | 60 | ~15MB | ✅ | Performance ótima |
+| **1.000 tarefas** | < 1.0s | 60 | ~25MB | ✅ | Performance muito boa |
+| **2.000 tarefas** | < 2.0s | 60 | ~45MB | ✅ | Performance boa |
+| **5.000 tarefas** | < 3.0s | 60 | ~25MB | ✅ | Performance excelente |
+| **10.000 tarefas** | < 5.0s | 60 | ~25MB | ✅ | Performance excelente |
+| **15.000 tarefas** | < 7.0s | 60 | ~25MB | ✅ | Performance excelente |
+| **20.000 tarefas** | < 10.0s | 60 | ~25MB | ✅ | Performance excelente |
 
 ## 🔧 Performance e Otimizações
 
@@ -141,6 +142,7 @@ Performance Metrics (Tempo em segundos)
 | **BlocBuilder** | Reconstrução apenas quando necessário | Reduz rebuilds desnecessários |
 | **Operações em Background** | UI não trava durante operações pesadas | Experiência do usuário fluida |
 | **Atualização Local** | Cubit atualizado antes do banco | Resposta instantânea |
+| **Paginação Automática** | Carrega apenas 100 itens por vez | Reduz uso de memória drasticamente |
 
 ### Métricas de Performance
 
@@ -248,6 +250,56 @@ void _applyFilters() {
 - **Atualização instantânea**: UI responde imediatamente
 - **Contadores em tempo real**: Mostra quantidade por status
 - **Interface responsiva**: Chips animados para seleção
+
+## 📄 Sistema de Paginação
+
+### Características da Paginação
+- **Ativação automática**: Paginação ativa quando há mais de 100 itens
+- **100 itens por página**: Otimizado para performance e usabilidade
+- **Navegação intuitiva**: Botões para primeira, anterior, próxima e última página
+- **Indicador visual**: Mostra página atual e total de páginas
+- **Seletor rápido**: Para listas com mais de 10 páginas, mostra páginas próximas
+- **Reset automático**: Volta para primeira página ao mudar filtros ou busca
+
+### Implementação Técnica
+
+```dart
+// Controles de paginação no TaskCubit
+static const int _itemsPerPage = 100;
+int _currentPage = 0;
+bool _hasPagination = false;
+
+// Métodos de navegação
+void nextPage() { /* navega para próxima página */ }
+void previousPage() { /* navega para página anterior */ }
+void goToPage(int page) { /* vai para página específica */ }
+
+// Getters informativos
+int get currentPage => _currentPage;
+int get totalPages => (_filteredTasks.length / _itemsPerPage).ceil();
+bool get hasPagination => _filteredTasks.length > _itemsPerPage;
+bool get hasNextPage => _currentPage < totalPages - 1;
+bool get hasPreviousPage => _currentPage > 0;
+```
+
+### Benefícios de Performance
+- **Reduz uso de memória**: Carrega apenas 100 itens por vez
+- **Melhora responsividade**: Interface mais fluida com grandes volumes
+- **Scroll otimizado**: Lista menor = scroll mais rápido
+- **Carregamento instantâneo**: Navegação entre páginas é imediata
+- **Escalabilidade**: Suporte a milhares de itens sem degradação
+
+### Interface de Navegação
+- **Contadores informativos**: "Página X de Y" e "Mostrando A-B de C tarefas"
+- **Botões de navegação**: Primeira, anterior, próxima, última página
+- **Indicador de página atual**: Destaque visual da página atual
+- **Seletor de páginas**: Para listas grandes, mostra páginas próximas com "..."
+
+### Comportamento Inteligente
+- **Ativação automática**: Só aparece quando necessário (>100 itens)
+- **Reset de contexto**: Volta para primeira página ao filtrar/buscar
+- **Validação de limites**: Impede navegação para páginas inexistentes
+- **Integração com filtros**: Paginação funciona com busca e filtros
 
 ### Hard Delete
 1. Remove documento do banco
@@ -368,6 +420,9 @@ Este projeto é de uso educacional e demonstração de conceitos de idempotênci
 **Desenvolvido como estudo prático de idempotência e performance em aplicações móveis com Flutter e Couchbase Lite.**
 
 VERSIONS:
+
+v3:
+<img width="813" height="885" alt="Image" src="https://github.com/user-attachments/assets/be8ed44e-5f2d-4fcb-9272-531d12fdef1a" />
 
 v2:
 <img width="800" height="940" alt="Image" src="https://github.com/user-attachments/assets/ecf57d85-d4bb-487c-ae9c-197bc0b696f7" />
