@@ -409,6 +409,12 @@ ggfm/
 - Implementar sincronização com servidor remoto
 - Adicionar testes automatizados
 - Implementar backup e restore de dados
+- Reorganizar o projeto para arquitetura modular (Clean Architecture)
+  - Separar camadas de apresentação, domínio e infraestrutura
+  - Modularizar o código para facilitar manutenção e escalabilidade
+- Extrair regras de negócio reutilizáveis em uma biblioteca (lib)
+  - Criar uma lib para lógica de idempotência, manipulação de tarefas e paginação
+  - Permitir o reuso dessas regras em outros módulos e aplicações
 
 ## 📝 Licença
 
