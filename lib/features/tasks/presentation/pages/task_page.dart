@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import '../../../../core/widgets/pagination_controls.dart';
 
 import '../../domain/entities/task.dart';
 import '../cubit/task_cubit.dart';
@@ -86,10 +87,14 @@ class _TaskPageState extends State<TaskPage> {
                     final hasPagination = state.totalPages > 1;
                     if (!hasPagination) return const SizedBox.shrink();
 
-                    return _PaginationBar(
-                      currentPage: state.currentPage,
-                      totalPages: state.totalPages,
-                      onPageSelected: (page) => context.read<TaskCubit>().goToPage(page),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: PaginationControls(
+                        hasPreviousPage: state.currentPage > 0,
+                        hasNextPage: state.currentPage < state.totalPages - 1,
+                        onPreviousPage: () => context.read<TaskCubit>().previousPage(),
+                        onNextPage: () => context.read<TaskCubit>().nextPage(),
+                      ),
                     );
                   }
                   return const SizedBox.shrink();
@@ -407,47 +412,6 @@ class _FilterChip extends StatelessWidget {
             fontSize: 14,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PaginationBar extends StatelessWidget {
-  final int currentPage;
-  final int totalPages;
-  final void Function(int page) onPageSelected;
-
-  const _PaginationBar({
-    required this.currentPage,
-    required this.totalPages,
-    required this.onPageSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.first_page),
-            onPressed: currentPage > 0 ? () => onPageSelected(0) : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: currentPage > 0 ? () => onPageSelected(currentPage - 1) : null,
-          ),
-          Text('Página ${currentPage + 1} de $totalPages'),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: currentPage < totalPages - 1 ? () => onPageSelected(currentPage + 1) : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.last_page),
-            onPressed: currentPage < totalPages - 1 ? () => onPageSelected(totalPages - 1) : null,
-          ),
-        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/usecases/usecase.dart';
 import '../../../../core/utils/result.dart' as res;
+import '../../../../core/utils/pagination_helper.dart';
 import '../../domain/entities/task.dart';
 import '../../domain/usecases/add_multiple_tasks.dart';
 import '../../domain/usecases/add_task.dart';
@@ -17,8 +18,6 @@ class TaskCubit extends Cubit<TaskState> {
   final UpdateTask updateTaskUseCase;
   final DeleteTask deleteTaskUseCase;
   final AddMultipleTasks addMultipleTasksUseCase;
-
-  static const int _itemsPerPage = 100;
 
   TaskCubit({
     required this.getAllTasksUseCase,
@@ -191,6 +190,24 @@ class TaskCubit extends Cubit<TaskState> {
     }
   }
 
+  void nextPage() {
+    if (state is TaskLoaded) {
+      final currentState = state as TaskLoaded;
+      if (currentState.currentPage < currentState.totalPages - 1) {
+        goToPage(currentState.currentPage + 1);
+      }
+    }
+  }
+
+  void previousPage() {
+    if (state is TaskLoaded) {
+      final currentState = state as TaskLoaded;
+      if (currentState.currentPage > 0) {
+        goToPage(currentState.currentPage - 1);
+      }
+    }
+  }
+
   Future<void> addFakeTasks() async {
     if (state is! TaskLoaded) return;
     final currentState = state as TaskLoaded;
@@ -242,18 +259,25 @@ class TaskCubit extends Cubit<TaskState> {
     }
 
     // 3. Aplicar paginação
-    final totalPages = (filteredTasks.length / _itemsPerPage).ceil();
-    final startIndex = page * _itemsPerPage;
-    final endIndex = (startIndex + _itemsPerPage).clamp(0, filteredTasks.length);
-    final paginatedTasks = filteredTasks.sublist(startIndex, endIndex);
+    final paginationHelper = PaginationHelper(
+      totalItems: filteredTasks.length,
+      itemsPerPage: 100, // Mantendo o valor original de 100 itens por página
+    );
+
+    // Garante que a página solicitada é válida para evitar erros de range.
+    final validPage = page.clamp(0, (paginationHelper.totalPages - 1).clamp(0, 999999));
+    paginationHelper.goToPage(validPage);
+
+    final paginatedTasks =
+        filteredTasks.sublist(paginationHelper.startIndex, paginationHelper.endIndex);
 
     emit(TaskLoaded(
       allTasks: allTasks,
       displayedTasks: paginatedTasks,
       currentFilter: filter,
       searchQuery: query,
-      currentPage: page,
-      totalPages: totalPages > 0 ? totalPages : 1,
+      currentPage: paginationHelper.currentPage,
+      totalPages: paginationHelper.totalPages,
     ));
   }
 }

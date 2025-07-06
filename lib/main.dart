@@ -1,10 +1,12 @@
-import 'package:cbl_flutter/cbl_flutter.dart';
 import 'package:flutter/material.dart';
+
+import 'package:cbl_flutter/cbl_flutter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'features/tasks/presentation/cubit/task_cubit.dart';
 import 'features/tasks/presentation/pages/task_page.dart';
 import 'injection_container.dart' as di; // Importamos com um alias 'di'
+
 
 Future<void> main() async {
   // Garante que os bindings do Flutter foram inicializados antes de rodar código assíncrono.
