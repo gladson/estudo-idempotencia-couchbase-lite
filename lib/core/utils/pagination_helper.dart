@@ -1,11 +1,11 @@
-/// A helper class to manage pagination state.
+/// Uma classe auxiliar para gerenciar o estado da paginação.
 ///
-/// This class is designed to be used within a state management solution (like a Cubit or Bloc)
-/// to handle the logic of splitting a large list into pages.
+/// Esta classe foi projetada para ser usada em uma solução de gerenciamento de estado (como um Cubit ou Bloc)
+/// para lidar com a lógica de divisão de uma lista grande em páginas.
 ///
-/// Note: This helper assumes the full list of items is available in memory.
-/// For very large datasets, pagination should be handled at the data source level
-/// (e.g., in the database query) for better performance.
+/// Observação: Este auxiliar pressupõe que a lista completa de itens esteja disponível na memória.
+/// Para conjuntos de dados muito grandes, a paginação deve ser tratada no nível da fonte de dados
+/// (por exemplo, na consulta ao banco de dados) para melhor desempenho.
 class PaginationHelper {
   final int totalItems;
   final int itemsPerPage;
