@@ -17,31 +17,40 @@ Este projeto demonstra a implementação prática de **idempotência** em aplica
 
 ## 🏗️ Arquitetura do Projeto
 
+O projeto foi estruturado seguindo os princípios da **Clean Architecture**, garantindo uma separação clara de responsabilidades, alta testabilidade e manutenibilidade. A lógica é dividida em três camadas principais:
+
+-   **Camada de Apresentação (Presentation)**: Responsável pela UI e gerenciamento de estado. Contém os Widgets (em `pages/`), o `TaskCubit` e `TaskState`. Não possui conhecimento sobre a origem dos dados.
+-   **Camada de Domínio (Domain)**: O coração da aplicação. Contém a lógica de negócio pura, incluindo as `Entities` (ex: `Task`), os `Use Cases` (casos de uso, ex: `AddTask`) e os contratos dos `Repositories` (interfaces). Esta camada é totalmente independente de frameworks de UI ou de detalhes de banco de dados.
+-   **Camada de Dados (Data)**: Implementa os repositórios definidos no domínio. É responsável por buscar os dados de fontes externas (neste caso, o Couchbase Lite) e mapeá-los para as entidades do domínio. Contém os `Models` (que sabem como ser (de)serializados), `DataSources` (que interagem diretamente com o banco) e as implementações dos `Repositories`.
+
 ### Tecnologias Utilizadas
 
 | Tecnologia | Versão | Propósito |
 |------------|--------|-----------|
-| Flutter | 3.32.5 | Framework de UI |
-| Couchbase Lite | 3.0.0 | Banco de dados local |
+| Flutter | 3.8.1 | Framework de UI |
+| Couchbase Lite | 3.x | Banco de dados local NoSQL |
 | Flutter Bloc | 9.1.1 | Gerenciamento de estado |
+| GetIt | 8.0.3 | Injeção de Dependência (Service Locator) |
+| Equatable | 2.0.5 | Comparação de objetos e estados |
+| Flutter Slidable | 4.0.0 | Gestos de arrastar em listas |
 | UUID | 3.0.7 | Geração de IDs únicos |
-| Path | 1.9.1 | Manipulação de caminhos |
+| Path Provider | 2.1.5 | Acesso ao diretório de documentos |
 
 ### Estrutura do Banco de Dados
 
+Cada tarefa é armazenada como um documento JSON no Couchbase Lite com a seguinte estrutura:
+
 ```json
 {
-  "_id": "auto-generated",
-  "tasks": {
-    "type": "task",
-    "idg": "uuid-v4-gerado",
-    "description": "Descrição da tarefa",
-    "completed": false,
-    "createdAt": 1234567890,
-    "completedAt": null,
-    "deletedAt": null,
-    "updatedAt": null
-  }
+  "_id": "auto-generated-by-couchbase",
+  "type": "task",
+  "idg": "uuid-v4-gerado-pelo-app",
+  "description": "Descrição da tarefa",
+  "completed": false,
+  "createdAt": 1234567890,
+  "completedAt": null,
+  "deletedAt": null,
+  "updatedAt": null
 }
 ```
 
@@ -409,12 +418,31 @@ ggfm/
 - Implementar sincronização com servidor remoto
 - Adicionar testes automatizados
 - Implementar backup e restore de dados
-- Reorganizar o projeto para arquitetura modular (Clean Architecture)
-  - Separar camadas de apresentação, domínio e infraestrutura
-  - Modularizar o código para facilitar manutenção e escalabilidade
-- Extrair regras de negócio reutilizáveis em uma biblioteca (lib)
-  - Criar uma lib para lógica de idempotência, manipulação de tarefas e paginação
-  - Permitir o reuso dessas regras em outros módulos e aplicações
+- **Refatoração para Clean Architecture**: Atualmente, toda a lógica reside em `main.dart`. O próximo passo crucial é refatorar o projeto para uma arquitetura limpa e modular. Isso aumentará a manutenibilidade, testabilidade e escalabilidade do código.
+  - **Camada de Apresentação (Presentation)**: Conterá os Widgets, a UI e o gerenciamento de estado (Bloc/Cubit).
+  - **Camada de Domínio (Domain)**: Conterá as entidades (ex: `Task`), casos de uso (ex: `AddTaskUseCase`) e as abstrações dos repositórios (interfaces). Esta camada será independente de qualquer framework.
+  - **Camada de Dados (Data)**: Implementará os repositórios definidos no domínio, interagindo com fontes de dados como o Couchbase Lite.
+  - **Estrutura de Pastas Sugerida**:
+    ```
+    lib/
+    ├── features/
+    │   └── tasks/
+    │       ├── data/
+    │       │   ├── datasources/  # Lógica de acesso ao Couchbase
+    │       │   ├── models/       # Modelos de dados (ex: TaskModel)
+    │       │   └── repositories/ # Implementação do repositório
+    │       ├── domain/
+    │       │   ├── entities/     # Entidades de negócio (ex: Task)
+    │       │   ├── repositories/ # Contratos/Interfaces dos repositórios
+    │       │   └── usecases/     # Casos de uso (ex: AddTask)
+    │       └── presentation/
+    │           ├── cubit/        # TaskCubit e TaskState
+    │           └── widgets/      # Widgets específicos da feature
+    └── core/
+        ├── usecases/             # Casos de uso genéricos
+        └── error/                # Tratamento de erros (Failures)
+    ```
+- **Extração de um Pacote Core**: A lógica de idempotência, paginação e os componentes de UI genéricos podem ser extraídos para um pacote local ou até mesmo publicados. Isso promove o reuso de código em futuros projetos ou em diferentes módulos dentro desta mesma aplicação.
 
 ## 📝 Licença
 
