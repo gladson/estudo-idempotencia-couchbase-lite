@@ -586,31 +586,6 @@ ggfm/
 - Implementar sincronização com servidor remoto
 - Adicionar testes automatizados
 - Implementar backup e restore de dados
-- **Refatoração para Clean Architecture**: Atualmente, toda a lógica reside em `main.dart`. O próximo passo crucial é refatorar o projeto para uma arquitetura limpa e modular. Isso aumentará a manutenibilidade, testabilidade e escalabilidade do código.
-  - **Camada de Apresentação (Presentation)**: Conterá os Widgets, a UI e o gerenciamento de estado (Bloc/Cubit).
-  - **Camada de Domínio (Domain)**: Conterá as entidades (ex: `Task`), casos de uso (ex: `AddTaskUseCase`) e as abstrações dos repositórios (interfaces). Esta camada será independente de qualquer framework.
-  - **Camada de Dados (Data)**: Implementará os repositórios definidos no domínio, interagindo com fontes de dados como o Couchbase Lite.
-  - **Estrutura de Pastas Sugerida**:
-    ```
-    lib/
-    ├── features/
-    │   └── tasks/
-    │       ├── data/
-    │       │   ├── datasources/  # Lógica de acesso ao Couchbase
-    │       │   ├── models/       # Modelos de dados (ex: TaskModel)
-    │       │   └── repositories/ # Implementação do repositório
-    │       ├── domain/
-    │       │   ├── entities/     # Entidades de negócio (ex: Task)
-    │       │   ├── repositories/ # Contratos/Interfaces dos repositórios
-    │       │   └── usecases/     # Casos de uso (ex: AddTask)
-    │       └── presentation/
-    │           ├── cubit/        # TaskCubit e TaskState
-    │           └── widgets/      # Widgets específicos da feature
-    └── core/
-        ├── usecases/             # Casos de uso genéricos
-        └── error/                # Tratamento de erros (Failures)
-    ```
-- **Extração de um Pacote Core**: A lógica de idempotência, paginação e os componentes de UI genéricos podem ser extraídos para um pacote local ou até mesmo publicados. Isso promove o reuso de código em futuros projetos ou em diferentes módulos dentro desta mesma aplicação.
 
 ## 📝 Licença
 
