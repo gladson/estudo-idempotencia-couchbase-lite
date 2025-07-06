@@ -1,6 +1,6 @@
 # Projeto de Estudo Flutter: Idempotência com Couchbase Lite
 
-![Flutter](https://img.shields.io/badge/Flutter-3.8.1-blue.svg)
+![Flutter](https://img.shields.io/badge/Flutter-3.22.2-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Platforms](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows%20%7C%20Web-brightgreen.svg)
 
@@ -32,19 +32,170 @@ Graças ao Flutter, este projeto foi configurado para rodar nas seguintes plataf
 
 ## 🏗️ Arquitetura do Projeto
 
-O projeto está em processo de refatoração para a **Clean Architecture**, garantindo uma separação clara de responsabilidades, alta testabilidade e manutenibilidade. A injeção de dependência foi centralizada usando `GetIt` para desacoplar as camadas. A lógica está sendo dividida em:
+O projeto adota uma arquitetura limpa, modular e escalável, combinando os princípios da **Clean Architecture** com a extração de um **Módulo Core** para promover o reuso de código.
 
--   **Camada de Apresentação (Presentation)**: Responsável pela UI e gerenciamento de estado. Contém os Widgets (em `pages/`), o `TaskCubit` e `TaskState`. Não possui conhecimento sobre a origem dos dados.
--   **Camada de Domínio (Domain)**: O coração da aplicação. Contém a lógica de negócio pura, incluindo as `Entities` (ex: `Task`), os `Use Cases` (casos de uso, ex: `AddTask`) e os contratos dos `Repositories` (interfaces). Esta camada é totalmente independente de frameworks de UI ou de detalhes de banco de dados.
+-   **Camada de Apresentação (Presentation)**: Responsável pela UI e gerenciamento de estado. Contém os Widgets, o `TaskCubit` e `TaskState`. Não possui conhecimento sobre a origem dos dados.
+-   **Camada de Domínio (Domain)**: O coração da aplicação. Contém a lógica de negócio pura, incluindo as `Entities` (ex: `Task`), os `Use Cases` (casos de uso, ex: `AddTaskUseCase`) e os contratos dos `Repositories` (interfaces). Esta camada é totalmente independente de frameworks de UI ou de detalhes de banco de dados.
 -   **Camada de Dados (Data)**: Implementa os repositórios definidos no domínio. É responsável por buscar os dados de fontes externas (neste caso, o Couchbase Lite) e mapeá-los para as entidades do domínio. Contém os `Models` (que sabem como ser (de)serializados), `DataSources` (que interagem diretamente com o banco) e as implementações dos `Repositories`.
+-   **Módulo Core (lib/core)**: Para promover o reuso, a lógica de idempotência, o sistema de paginação e os componentes de UI genéricos (como os chips de informação e os controles de paginação) estão sendo extraídos para um módulo compartilhado. Este módulo é agnóstico à regra de negócio principal e pode ser facilmente utilizado por outras features no futuro.
 
-A injeção de dependência foi extraída para um arquivo dedicado (`injection_container.dart`) para facilitar o gerenciamento e a testabilidade.
+### 📊 Diagrama de Arquitetura
+
+O diagrama a seguir ilustra a Clean Architecture adotada no projeto, mostrando como as camadas se comunicam e o fluxo de controle de uma requisição.
+
+| Símbolo | Descrição |
+| :--- | :--- |
+| **Setas Sólidas (`-->`)** | Representam o **fluxo de controle** e a **direção das dependências**. A camada de Apresentação conhece o Domínio, e o Domínio conhece apenas suas próprias abstrações. |
+| **Setas Tracejadas (`-.->`)** | Representam o **fluxo de dados** de volta para a UI ou a **inversão de dependência**, onde uma camada externa implementa uma interface de uma camada interna. |
+| **Números (1-6)** | Indicam a sequência de uma operação típica, como adicionar uma nova tarefa. |
+
+```mermaid
+graph TD
+    subgraph "Presentation Layer (Flutter UI)"
+        UI[/"Widgets/Pages"/]
+        Cubit[TaskCubit]
+    end
+
+    subgraph "Domain Layer (Dart Puro)"
+        UseCases[Use Cases]
+        RepoInterfaces[Abstrações de Repositório]
+    end
+
+    subgraph "Data Layer (Flutter + Pacotes)"
+        RepoImpls[Implementações de Repositório]
+        DataSources[Data Sources]
+    end
+
+    subgraph "External"
+        DB[(Couchbase Lite)]
+    end
+
+    UI -- "1.Evento do Usuário" --> Cubit
+    Cubit -- "2.Executa Use Case" --> UseCases
+    UseCases -- "3.Solicita Dados" --> RepoInterfaces
+
+    RepoImpls -.->|implementa via GetIt| RepoInterfaces
+    RepoImpls -- "4.Busca Dados" --> DataSources
+    DataSources -- "5.Acessa" --> DB
+
+    Cubit -- "6.Emite Estado" --> UI
+```
+
+### 🔄 Explicação Detalhada do Fluxo "Chama"
+
+O termo **"Chama"** no diagrama representa **chamadas de método** ou **invocações de funções** entre as camadas. Vamos entender cada etapa:
+
+#### **Etapa 2: "Cubit -- 2.Executa Use Case --> UseCases"**
+- **O que acontece**: O `TaskCubit` **chama** (executa) um método de um Use Case
+- **Exemplo prático**: 
+  ```dart
+  // No TaskCubit
+  void addTask(String description) {
+    // Chama o método execute() do AddTaskUseCase
+    final result = await addTaskUseCase.execute(description);
+  }
+  ```
+
+#### **Etapa 3: "UseCases -- 3.Solicita Dados --> RepoInterfaces"**
+- **O que acontece**: O Use Case **chama** (solicita) dados através da interface do repositório
+- **Exemplo prático**:
+  ```dart
+  // No AddTaskUseCase
+  Future<Result<void>> execute(String description) async {
+    // Chama o método add() da interface TaskRepository
+    return await repository.add(task);
+  }
+  ```
+
+#### **Etapa 4: "RepoImpls -- 4.Busca Dados --> DataSources"**
+- **O que acontece**: A implementação do repositório **chama** (busca) dados do DataSource
+- **Exemplo prático**:
+  ```dart
+  // No TaskRepositoryImpl
+  Future<Result<void>> add(Task task) async {
+    // Chama o método insert() do TaskLocalDataSource
+    return await dataSource.insert(task);
+  }
+  ```
+
+#### **Por que usar "Chama" em vez de outros termos?**
+
+1. **Precisão técnica**: "Chama" é o termo correto em programação para invocar métodos
+2. **Clareza**: Deixa claro que é uma execução de código, não apenas passagem de dados
+3. **Direção**: Mostra quem está **iniciando** a ação (quem chama) e quem está **recebendo** (quem é chamado)
+
+#### **Fluxo Completo de uma Operação**
+
+Vamos seguir o exemplo de **adicionar uma tarefa**:
+
+1. **Usuário clica no botão** → UI dispara evento
+2. **TaskCubit recebe o evento** → Chama `addTaskUseCase.execute()`
+3. **Use Case executa lógica** → Chama `repository.add()`
+4. **Repository processa** → Chama `dataSource.insert()`
+5. **DataSource salva no banco** → Acessa Couchbase Lite
+6. **Resultado volta pela mesma cadeia** → Cubit emite novo estado
+7. **UI atualiza** → Mostra a nova tarefa na lista
+
+### 💉 Injeção de Dependência com GetIt
+
+Para gerenciar as dependências entre as camadas e promover um baixo acoplamento, o projeto utiliza o pacote `get_it`. Ele atua como um **Service Locator**, um padrão que centraliza o registro e a resolução de dependências em um único local, facilitando a manutenção e a testabilidade.
+
+**Por que GetIt?**
+- **Simplicidade e Performance**: É leve, rápido e não utiliza reflection, o que o torna ideal para aplicações Flutter.
+- **Desacoplamento**: Permite que as camadas superiores (ex: Presentation) dependam de abstrações (ex: Use Cases) sem conhecer as implementações concretas das camadas inferiores (ex: Data).
+- **Facilidade para Testes**: Em um ambiente de teste, é simples registrar implementações "mock" (falsas) no lugar das reais, permitindo testar cada camada de forma isolada.
+
+**Configuração (`injection_container.dart`)**
+
+Toda a configuração é centralizada no arquivo `lib/injection_container.dart`. A inicialização é feita uma única vez, no `main.dart`, antes da aplicação ser executada.
+
+O processo de registro segue a ordem das camadas, de fora para dentro:
+
+1.  **External:** Registra dependências externas, como a instância do `Database` do Couchbase Lite.
+2.  **Data Layer:**
+    -   `TaskLocalDataSource`: Registrado como `lazySingleton`, pois precisamos de uma única instância para interagir com o banco.
+    -   `TaskRepository`: A implementação `TaskRepositoryImpl` também é registrada como `lazySingleton`, dependendo do `TaskLocalDataSource`.
+3.  **Domain Layer:**
+    -   **Use Cases** (ex: `GetAllTasksUseCase`, `AddTaskUseCase`): São registrados como `lazySingleton`, pois não possuem estado e podem ser reutilizados em toda a aplicação.
+4.  **Presentation Layer:**
+    -   **Bloc/Cubit** (ex: `TaskCubit`): É registrado como `factory`. Isso significa que uma **nova instância** do Cubit é criada toda vez que é solicitada. Essa abordagem é ideal para garantir que o estado de uma tela seja sempre limpo e previsível quando ela é (re)construída.
+
+**Exemplo de Uso:**
+
+Para obter uma dependência, basta chamar o service locator (`sl`). Por exemplo, ao criar a `TaskPage`, o `TaskCubit` é fornecido através do `BlocProvider`:
+
+```dart
+// lib/features/tasks/presentation/pages/task_page.dart
+BlocProvider(
+  create: (_) => sl<TaskCubit>(), // sl() é a instância do GetIt
+  child: // ... resto da UI
+)
+```
+
+Dentro do `TaskCubit`, as dependências (Use Cases) são injetadas via construtor, seguindo o princípio de Inversão de Dependência:
+
+```dart
+// lib/features/tasks/presentation/cubit/task_cubit.dart
+class TaskCubit extends Cubit<TaskState> {
+  final GetAllTasksUseCase getAllTasks;
+  final AddTaskUseCase addTask;
+  // ... outros use cases
+
+  TaskCubit({
+    required this.getAllTasks,
+    required this.addTask,
+    // ...
+  }) : super(TaskInitial());
+}
+```
+
+Essa estrutura garante um código limpo, organizado e altamente testável.
 
 ### Tecnologias Utilizadas
 
 | Tecnologia | Versão | Propósito |
 |------------|--------|-----------|
-| Flutter | 3.8.1 | Framework de UI |
+| Flutter | 3.22.2 | Framework de UI |
 | Couchbase Lite | 3.x | Banco de dados local NoSQL |
 | Flutter Bloc | 9.1.1 | Gerenciamento de estado |
 | GetIt | 8.0.3 | Injeção de Dependência (Service Locator) |
