@@ -32,11 +32,13 @@ Graças ao Flutter, este projeto foi configurado para rodar nas seguintes plataf
 
 ## 🏗️ Arquitetura do Projeto
 
-O projeto foi estruturado seguindo os princípios da **Clean Architecture**, garantindo uma separação clara de responsabilidades, alta testabilidade e manutenibilidade. A lógica é dividida em três camadas principais:
+O projeto está em processo de refatoração para a **Clean Architecture**, garantindo uma separação clara de responsabilidades, alta testabilidade e manutenibilidade. A injeção de dependência foi centralizada usando `GetIt` para desacoplar as camadas. A lógica está sendo dividida em:
 
 -   **Camada de Apresentação (Presentation)**: Responsável pela UI e gerenciamento de estado. Contém os Widgets (em `pages/`), o `TaskCubit` e `TaskState`. Não possui conhecimento sobre a origem dos dados.
 -   **Camada de Domínio (Domain)**: O coração da aplicação. Contém a lógica de negócio pura, incluindo as `Entities` (ex: `Task`), os `Use Cases` (casos de uso, ex: `AddTask`) e os contratos dos `Repositories` (interfaces). Esta camada é totalmente independente de frameworks de UI ou de detalhes de banco de dados.
 -   **Camada de Dados (Data)**: Implementa os repositórios definidos no domínio. É responsável por buscar os dados de fontes externas (neste caso, o Couchbase Lite) e mapeá-los para as entidades do domínio. Contém os `Models` (que sabem como ser (de)serializados), `DataSources` (que interagem diretamente com o banco) e as implementações dos `Repositories`.
+
+A injeção de dependência foi extraída para um arquivo dedicado (`injection_container.dart`) para facilitar o gerenciamento e a testabilidade.
 
 ### Tecnologias Utilizadas
 
