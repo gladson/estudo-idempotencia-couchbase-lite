@@ -1,11 +1,26 @@
-# Projeto de Estudo: Idempotência com Couchbase Lite
+# Projeto de Estudo Flutter: Idempotência com Couchbase Lite
+
+![Flutter](https://img.shields.io/badge/Flutter-3.8.1-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Platforms](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows%20%7C%20Web-brightgreen.svg)
 
 <img width="811" height="886" alt="Image" src="https://github.com/user-attachments/assets/a0719b3b-97de-4f71-bef2-4555f79ada96" />
 
 
 ## 📋 Visão Geral
 
-Este projeto demonstra a implementação prática de **idempotência** em aplicações Flutter utilizando **Couchbase Lite** como banco de dados local. O objetivo é criar um sistema robusto onde operações podem ser executadas múltiplas vezes sem causar efeitos colaterais indesejados.
+Este projeto é um estudo de caso aprofundado sobre a implementação prática de **idempotência** em aplicações Flutter, utilizando **Couchbase Lite** como banco de dados local. O objetivo é construir um sistema robusto onde operações de criação, atualização e exclusão podem ser executadas múltiplas vezes sem gerar duplicatas ou estados inconsistentes.
+
+## 💻 Plataformas Suportadas
+
+Graças ao Flutter, este projeto foi configurado para rodar nas seguintes plataformas a partir de uma única base de código:
+
+- ✅ Android
+- ✅ iOS
+- ✅ macOS
+- ✅ Linux
+- ✅ Windows
+- ✅ Web
 
 ## 🎯 Objetivos do Estudo
 
